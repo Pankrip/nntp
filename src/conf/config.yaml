@@ -1,0 +1,14 @@
+server:
+ name: nntp
+ host: 127.0.0.1
+ port: 9111
+ logs:
+  access: ./access.log
+  error: ./error.log
+
+storage:
+ directory: ./groups
+
+messages:
+ 100: 'placeholder'
+

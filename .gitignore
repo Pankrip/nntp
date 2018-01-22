@@ -1,3 +1,5 @@
 .stack-work/
 nntp.cabal
 *~
+*.swp
+

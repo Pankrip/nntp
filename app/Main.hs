@@ -1,6 +1,20 @@
 module Main where
 
-import Lib
+import Data.ByteString.Lazy
+import Data.ByteString.Builder
+import System.Environment
+--
+import Init
+import MasterSocket
 
 main :: IO ()
-main = someFunc
+{-
+-- TODO: Either + IO
+main = (
+	getArgs >>=
+	\argv -> getConfig argv >>=
+	\conf -> initMasterSocket (host conf) (port conf) >>=
+	\msock -> undefined
+	)
+-}
+main = undefined
