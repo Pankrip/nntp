@@ -21,6 +21,19 @@ description:         Please see the README on Github at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- bytestring
+- yaml-config
+- unix
+- unix-bytestring
+- regex-posix
+- split
+- hspec
+- hspec-core
+- hspec-discover
+- QuickCheck
+- quickcheck-instances
+- text
+- dates
 
 library:
   source-dirs: src
