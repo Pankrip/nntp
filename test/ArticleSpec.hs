@@ -52,6 +52,14 @@ spec = do
                 getMessageID holder8 `shouldBe` Just "1233213"
             it "should fail if there is no Message-ID field in an article" $ do
                 getMessageID holder1 `shouldBe` Nothing
+        describe "getFieldTuple" $ do
+            it "should grab a given header field from a header" $ do
+                getFieldTuple holder2 "subject" `shouldBe` Just (C.pack "SUBJECT", C.pack "testsubject")
+        describe "getNewsgroups" $ do
+            it "should grab the list of newsgroups from an article" $ do
+                getNewsgroups holder1 `shouldBe` (Just ["test1", "test2", "test3"])
+            it "may fail if during the exection process an invalid argument is encountered" $ do
+                getNewsgroups holder9 `shouldBe` Nothing
 
 holder1 :: S.ByteString
 holder1 = C.pack "Subject: testsubject\nFrom: emailhere\nNewsgroups: test1,test2,test3\n\nThe body is here"
@@ -76,3 +84,6 @@ holder7 = [(C.pack "Subject", C.pack "testsubject"),(C.pack "From", C.pack "emai
 
 holder8 :: S.ByteString
 holder8 = C.pack "Subject: testsubject\nMessage-ID: <1233213>\nNewsgroups: test1,test2,test3\n\nThe body is here"
+
+holder9 :: S.ByteString
+holder9 = C.pack "Monad is a burrito"

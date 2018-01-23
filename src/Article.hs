@@ -24,7 +24,9 @@ module Article (
     newsgroupsToList,    -- : (S.ByteString, S.ByteString) -> Maybe [String]
     requiredForPOST,     -- : [String]
     requiredForIHAVE,    -- : [String]
-    getMessageID         -- : Maybe String
+    getMessageID,        -- : Maybe String
+    getFieldTuple,       -- : S.ByteString -> String -> (S.ByteString, S.ByteString)
+    getNewsgroups        -- : S.ByteString -> Maybe [String]
 
 ) where
 
@@ -71,7 +73,7 @@ saveContentP cont iden = return (cont, iden) >>=
             Nothing -> return ()
             Just header -> case getBodyStr x of
                             Nothing -> return ()
-                            Just body -> S.writeFile ("storage/" ++ iden) (C.pack $ C.unpack header ++ y1 ++ z3 ++ (C.unpack body))
+                            Just body -> S.writeFile ("database/" ++ iden) (C.pack $ C.unpack header ++ y1 ++ z3 ++ (C.unpack body))
 
 -- | Saves an article to the database of the server (used in IHAVE)
 saveContentI  :: S.ByteString     -- ^ the contents of the article
@@ -85,7 +87,7 @@ saveContentI cont =
                             Nothing -> return ()
                             Just body -> case getMessageID cont of
                                 Nothing -> return ()
-                                Just iden -> S.writeFile ("storage/" ++ iden) (C.pack $ C.unpack header ++ y3 ++ (C.unpack body))
+                                Just iden -> S.writeFile ("database/" ++ iden) (C.pack $ C.unpack header ++ y3 ++ (C.unpack body))
 
 -- -----------------------------------------------------------------------------
 -- Working with ByteStrings
@@ -144,6 +146,15 @@ headerToTuples header =
     in
         map (\s -> (fst3 (s =~ ": " :: (S.ByteString, S.ByteString, S.ByteString)), thr3 (s =~ ": " :: (S.ByteString, S.ByteString, S.ByteString)))) fields
 
+-- | Find a particular header field in the header of an article and return it as a tuple (label, value)
+getFieldTuple :: S.ByteString                       -- ^ the header of an article
+              -> String                             -- ^ the name of the field (label)
+              -> Maybe (S.ByteString, S.ByteString) -- ^ just the pair representing the header or nothing in case of failure
+getFieldTuple header field = 
+    return (map (\(y1,y2) -> ((strToUpper . C.unpack) y1, y2)) (headerToTuples header)) >>= 
+    \y -> L.find (\w -> fst w == (strToUpper field)) y >>=
+    \(z1,z2) -> return (C.pack z1, z2)
+
 -- | Parse the list of newsgroups into a list
 newsgroupsToList :: (S.ByteString, S.ByteString)    -- ^ a tuple of form ("newsgroups", ng1, ng2, ..., ngn)
                  -> Maybe [String]                  -- ^ just the list of newsgroups or nothing in case of failure
@@ -158,6 +169,13 @@ getMessageID cont = getHeaderStr cont >>=
     \x -> return (map (\(y1,y2) -> ((strToUpper . C.unpack) y1, y2)) (headerToTuples x)) >>= 
     \y -> L.find (\w -> fst w == "MESSAGE-ID") y >>= 
     \z -> return ((C.unpack . S.tail . S.init) $ snd z)
+
+-- | Retrieve the list of newsgroups from a given article in the form of a ByteString
+getNewsgroups :: S.ByteString       -- ^ literal contents of an article
+              -> Maybe [String]     -- ^ just the list of newsgroups found or nothing in case of failure
+getNewsgroups cont = getHeaderStr cont >>=
+    \x -> getFieldTuple x "Newsgroups" >>=
+    \y -> newsgroupsToList y
 
 -- -----------------------------------------------------------------------------
 -- Helper fucntions (not exported by the module so not visile in the documentation either)
