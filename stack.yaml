@@ -54,6 +54,7 @@ extra-deps:
   - quickcheck-instances-0.3.16.1
   - text-1.2.3.0
   - dates-0.2.2.1
+  - aeson-1.2.3.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

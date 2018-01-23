@@ -1,8 +1,11 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
 -- |
 -- Module      : Article
 -- Copyright   : (c) pwegrzyn, Pankrip
 -- License     : MIT
--- Maintainer  : none
+-- Maintainer  : pwegrzyn
 -- Stability   : stable
 --
 -- This module represents a single article in the database.
@@ -11,7 +14,7 @@
 module Article (
 
     -- * Working with Articles
-    Article,
+    Article(..),
     getContent,          -- : Article -> IO S.ByteString
     saveContentP,        -- : S.ByteString -> String -> IO ()
     saveContentI,        -- : S.ByteString -> IO ()
@@ -42,13 +45,19 @@ import System.Environment
 import System.IO
 import Data.Tuple
 import qualified Data.List as L
+import Data.Aeson
+import GHC.Generics
 
 -- | ADT constructor takes a String representing the identifier of a particular
 -- article in the system's database.
 data Article = Article
              {
                  identifier :: String   -- ^ the MessageID identifer of the aritcle (also the name of the file)
-             } deriving (Show, Eq)
+             } deriving (Show, Eq, Generic, FromJSON, ToJSON)
+
+-- Used for serialization
+-- instance FromJSON Article
+-- instance ToJSON Article
 
 -- -----------------------------------------------------------------------------
 -- Working with Articles
@@ -191,9 +200,3 @@ snd3 (_,x,_) = x
 
 strToUpper :: [Char] -> [Char]
 strToUpper str = map toUpper str
-
-tester1 :: IO ()
-tester1 = saveContentP (C.pack "Subject: testsubject\nFrom: emailhere\nNewsgroups: test1,test2,test3\n\nThe body is here") "123@UCP"
-
-tester2 :: IO ()
-tester2 = saveContentI (C.pack "Subject: testsubject\nMessage-ID: <123@UCP>\nNewsgroups: test1,test2,test3\n\nThe body is here")

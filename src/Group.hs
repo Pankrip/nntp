@@ -1,8 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- |
 -- Module      : Group
 -- Copyright   : (c) pwegrzyn, Pankrip
 -- License     : MIT
--- Maintainer  : none
+-- Maintainer  : pwegrzyn
 -- Stability   : stable
 --
 -- This module represents a particular instance of a new newsgroup.
@@ -11,25 +13,19 @@
 module Group (
 
     -- * Working with Groups
-    Group(..),       -- this is only exported for testing purpouses
-    mkNewGroup,      -- : String -> DateTime -> Group
-    addArtToGrp,     -- : Article -> Group -> Group
-    checkIfArtInGrp, -- : Article -> Group -> Bool
-    getNumericsForGrp-- : Group -> (Int, Int, Int)
+    Group(..),           -- this is only exported for testing purpouses
+    mkNewGroup,          -- : String -> DateTime -> Group
+    addArtToGrp,         -- : Article -> Group -> Group
+    checkIfArtInGrp,     -- : Article -> Group -> Bool
+    getNumericsForGrp,   -- : Group -> (Int, Int, Int)
+    checkIfValidNumeric, -- : Group -> Int -> Bool
+    getArtNumID          -- : Group -> Index -> Maybe Article
 
 ) where
 
--- import qualified Data.ByteString.Lazy as B
--- import qualified Data.ByteString as S
--- import Text.Regex.Posix
--- import qualified Data.ByteString.Char8 as C
--- import Data.List.Split (splitOn)
--- import Data.Char (toUpper)
--- import qualified Data.Text as T
--- import Data.Map (Map)
--- import qualified Data.Map as Map
 import Data.Dates
 import Article
+import Data.Aeson
 
 -- | ADT constructor takes a DateTime representing the date and time of the creation
 -- of the group as well as the list of articles associated with the group and the name
@@ -40,6 +36,41 @@ data Group = Group
                  creationDT   :: DateTime,    -- ^ date and time of creation    
                  articles     :: [Article]    -- ^ list of articles of a group
              } deriving (Show, Eq)
+
+-- Used in serialization
+instance ToJSON Group where
+  toJSON group = object
+    [ "name" .= toJSON (name group)
+    , "creationDT" .= toJSON (creationDT group)
+    , "articles" .= toJSON (articles group)
+    ]
+
+instance FromJSON Group where
+  parseJSON = withObject "Group" $ \o -> do
+    name_ <- o .: "name"
+    creationDT_ <- o .: "creationDT"
+    articles_ <- o .: "articles"
+    return $ Group name_ creationDT_ articles_
+
+instance ToJSON DateTime where
+  toJSON dt = object
+    [ "year" .= toJSON (year dt)
+    , "month" .= toJSON (month dt)
+    , "day" .= toJSON (day dt)
+    , "hour" .= toJSON (hour dt)
+    , "minute" .= toJSON (minute dt)
+    , "second" .= toJSON (second dt)
+    ]
+
+instance FromJSON DateTime where
+  parseJSON = withObject "DateTime" $ \o -> do
+    year_ <- o .: "year"
+    month_ <- o .: "month"
+    day_ <- o .: "day"
+    hour_ <- o .: "hour"
+    minute_ <- o .: "minute"
+    second_ <- o .: "second"
+    return $ DateTime year_ month_ day_ hour_ minute_ second_
 
 -- -----------------------------------------------------------------------------
 -- Working with Groups
@@ -83,3 +114,30 @@ getNumericsForGrp (Group {name = n, articles = a, creationDT = c}) =
         len = length a
     in
         (0, if len == 0 then len else len - 1 , len)
+
+-- | Check if numeric identifer is valid for a group
+-- (i. e. there exists an article in the group with such numeric ID)
+checkIfValidNumeric :: Group    -- ^ given group
+                    -> Int      -- ^ numeric identifier of an article in a group
+                    -> Bool     -- ^ iformation whether the identifer is valid or not
+checkIfValidNumeric grp index =
+    index >= (fst3 (getNumericsForGrp grp)) && index <= (snd3 (getNumericsForGrp grp))
+
+-- | Get the article belonging to a paricular group which has a given numeric identifer
+getArtNumID :: Group          -- ^ group in question
+            -> Int            -- ^ numeric identifier of the sought article
+            -> Maybe Article  -- ^ found article
+getArtNumID grp numID =
+    if checkIfValidNumeric grp numID
+        then Just $ (articles grp) !! numID
+    else
+        Nothing
+
+-- -----------------------------------------------------------------------------
+-- Helper functions
+
+fst3 :: (a,b,c) -> a
+fst3 (x,_,_) = x
+
+snd3 :: (a,b,c) -> b
+snd3 (_,x,_) = x
