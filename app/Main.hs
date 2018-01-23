@@ -18,3 +18,16 @@ main = (
 	)
 -}
 main = undefined
+
+{-
+ - main() components:
+ - getArgs
+ - getConfig
+ - initMasterSocket
+ - installExitHandlers
+ - ResotreStorage
+ - MasterLoop
+ - SyncStorage
+ - exit
+-}
+

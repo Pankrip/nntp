@@ -2,6 +2,7 @@ server:
  name: nntp
  host: 127.0.0.1
  port: 9111
+ max-connections: 20
  logs:
   access: ./access.log
   error: ./error.log
