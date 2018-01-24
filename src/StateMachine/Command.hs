@@ -97,6 +97,9 @@ csm NEWTEXT fd buf str max cd = (
 		\st -> case st of
 			new@(CL.ClientDescriptor { CL.state = CL.QuitMode }) ->
 				-- CL.repl CL.QuitMode (L.fromStrict str) new -- terminate connection -- repl QuitMode ...
+				-- unwind the stack back to original caller function
+				-- (but tail-call optimisation should make the stack frame reusable,
+				-- so in theory the caller should be just one stack frame up the chain)
 				return (new, (L.fromStrict str))
 			new@(CL.ClientDescriptor { CL.state = CL.PostMode }) ->
 				-- CL.repl CL.PostMode (L.fromStrict str) new -- transition -- repl PostMode ...
