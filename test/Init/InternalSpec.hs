@@ -20,11 +20,12 @@ spec = do
 			it "parses command line options (short)" $ do
 				parseArgs ["-c", "config.yaml"]
 				`shouldBe`
-				Right (Options { confFile = Just ("config.yaml" :: ByteString) })
+				Right (emptyOptions { confFile = Just ("config.yaml" :: ByteString) })
+				--Right (Options { confFile = Just ("config.yaml" :: ByteString) })
 			it "parses command line options (long)" $ do
 				parseArgs ["--port", "8080"]
 				`shouldBe`
-				Right (Options { port = Just ("8080" :: ByteString) })
+				Right (emptyOptions { port = Just ("8080" :: ByteString) })
 			it "returns set of default Options when there's no arguments" $ do
 				parseArgs []
 				`shouldBe`

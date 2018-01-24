@@ -26,8 +26,8 @@ parseArgs t = (
 		([], [], []) -> Right defaultOptions
 		(_, x : _, errs) -> Left (trailingArgsMsg ++ concat errs ++ usageInfo header options)
 			where trailingArgsMsg = "trailing options found on command line\n"
-		(_, _, errs) -> Left (concat errs ++ usageInfo header options)
 		(opts, _, []) -> Right (foldl (flip id) emptyOptions opts)
+		(_, _, errs) -> Left (concat errs ++ usageInfo header options)
 	)
 
 

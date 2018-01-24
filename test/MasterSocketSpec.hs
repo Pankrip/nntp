@@ -4,16 +4,26 @@ module MasterSocketSpec where
 
 import Data.ByteString
 import Foreign.C.Types
-import Network.Socket
+import qualified Network.Socket as N
 import Control.Concurrent.MVar
 import System.IO.Unsafe
+
 import Test.Hspec
+import Test.Helpers
 import MasterSocket
 
--- because there's no such function defined in Test.Hspec.Expectations
-shouldReturnSatisfy :: (HasCallStack, Show a, Eq a) => IO a -> (a -> Bool) -> Expectation
-action `shouldReturnSatisfy` expected = action >>= (`shouldSatisfy` expected)
-
+compareSocket :: Maybe String -> String -> N.Socket -> Bool
+compareSocket Nothing port s = compareSocket
+	(Just $ unsafePerformIO $ N.inet_ntoa N.iNADDR_ANY) port s
+compareSocket (Just testhost) port s = unsafePerformIO $
+	 N.isBound s >>=
+	 \isB -> N.getSocketName s >>=
+	 \(N.SockAddrInet num host) -> (
+		return $ and [ isB
+			, num == (read port :: N.PortNumber)
+			, host == (unsafePerformIO $ N.inet_addr testhost)
+		]
+		)
 
 main :: IO ()
 main = hspec spec
@@ -24,10 +34,12 @@ spec = do
 		describe "initMasterSocket" $ do
 			it "creates new bound socket on IADDR_ANY" $ do
 				initMasterSocket Nothing ("22222" :: ByteString)
-				`shouldReturn`
-				MkSocket (25 :: CInt) AF_INET Stream (6 :: CInt) (unsafePerformIO $ newMVar Bound)
+				`shouldReturnSatisfy`
+				(compareSocket Nothing "22222")
+				-- MkSocket (25 :: CInt) AF_INET Stream (6 :: CInt) (unsafePerformIO $ newMVar Bound)
 			it "or on specified address" $ do
 				initMasterSocket (Just ("127.0.0.1" :: ByteString)) ("33333" :: ByteString)
-				`shouldReturn`
-				MkSocket (26 :: CInt) AF_INET Stream (6 :: CInt) (unsafePerformIO $ newMVar Bound)
+				`shouldReturnSatisfy`
+				(compareSocket (Just "127.0.0.1") "33333")
+				-- MkSocket (26 :: CInt) AF_INET Stream (6 :: CInt) (unsafePerformIO $ newMVar Bound)
 
