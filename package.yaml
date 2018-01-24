@@ -42,6 +42,7 @@ executables:
     ghc-options:
     - -rtsopts
     - -with-rtsopts=-N
+    - -threaded
     dependencies:
     - nntp
 
