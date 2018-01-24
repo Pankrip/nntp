@@ -3,36 +3,37 @@ module MasterSocket
 	, acceptLoop
 	) where
 
-import Data.ByteString hiding (unpack)
-import Data.ByteString.Char8
-import Data.Word
+import qualified Data.ByteString as S hiding (unpack)
+import qualified Data.ByteString.Char8 as Cs
+import qualified Data.Word as W
 import qualified Data.HashSet as H
 import qualified Network.Socket as N
 import qualified Network.Socket.ByteString as N
 import qualified Control.Concurrent as C
 import qualified Control.Exception as E
-import System.Posix.Types (Fd)
+import qualified Control.Monad as M
+import System.Posix.Types (Fd (..))
 --
-import Signals (ShutdownSignal, sendTermSignal, ClientFinished)
-import Client (clientThread)
+import Signals (ShutdownSignal (..), sendTermSignal, ClientFinishedSignal (..))
+import Client (clientThread, threadFinish)
 
 -- | standard TCP protocol number as defined by IANA
-pROTO_TCP = 6 :: ProtocolNumber
+pROTO_TCP = 6 :: N.ProtocolNumber
 
 -- | Creates a 'Socket' and binds it to specified address and port
-initMasterSocket :: (Maybe ByteString) -- ^ hostname to bind to. Nothing for 'iNADDR_ANY'
-		 -> ByteString -- ^ string with port number or service name
-		 -> IO Socket -- ^ newly created bound socket (not in listening state)
+initMasterSocket :: (Maybe S.ByteString) -- ^ hostname to bind to. Nothing for 'iNADDR_ANY'
+		 -> S.ByteString -- ^ string with port number or service name
+		 -> IO N.Socket -- ^ newly created bound socket (not in listening state)
 initMasterSocket host port = (
 	let
 	hints = N.AddrInfo
-		{ addrFlags      = [N.AI_PASSIVE]
-		, addrFamily     = N.AF_INET
-		, addrSocketType = N.Stream
-		, addrProtocol   = pROTO_TCP
+		{ N.addrFlags      = [N.AI_PASSIVE]
+		, N.addrFamily     = N.AF_INET
+		, N.addrSocketType = N.Stream
+		, N.addrProtocol   = pROTO_TCP
 		}
 	in
-	N.getAddrInfo (Just hints) (unpack <$> host) (Just (unpack port :: ServiceName)) >>=
+	N.getAddrInfo (Just hints) (Cs.unpack <$> host) (Just (Cs.unpack port :: N.ServiceName)) >>=
 	\(addr:_) -> (
 		N.socket (N.addrFamily addr) (N.addrSocketType addr) (N.addrProtocol addr) >>=
 		\sock -> (
@@ -43,7 +44,7 @@ initMasterSocket host port = (
 	)
 
 -- | Main server loop, listens for incoming connections and dispatches them to client threads
-acceptLoop :: Socket -- ^ 'Socket' to listen on
+acceptLoop :: N.Socket -- ^ 'Socket' to listen on
 	   -> Int -- ^ Maximum number of waiting connections, also, 'Socket'\'s _backlog_ parameter
 	   -> IO ()
 acceptLoop sock backlog = (
@@ -52,10 +53,10 @@ acceptLoop sock backlog = (
 	N.listen sock backlog >>
 	let
 	fd = N.fdSocket sock
-	pending = empty :: H.HashSet C.ThreadId
+	pending = H.empty :: H.HashSet C.ThreadId
 	in
 	-- TODO: log: accepting connections..
-	servloop s fd backlog backlog pending
+	servloop sock (Fd fd) backlog backlog pending
 	)
 
 -- | Inner tail-recursive loop with "local variables"
@@ -72,46 +73,51 @@ servloop s fd maxconns conns pending = (
 		undefined
 	else
 		-- interrupt operation when shutdown signal is recieved
-		E.handle (\ex ->
-			case ex of
-				ShutdownSignal -> (
-					let
-					-- poor man's sequencing of pure functions
-					_ = gracefulExit pending
-					in
-					wrapUp s
-				)
-				ClientFinished tid -> (
-					servloop s fd maxconns (
-						-- avoid overflow
-						if cons < maxconns then
-							cons + 1
-						else maxconns
-						) (H.delete tid conns)
-				)
-			) (
-			-- if there's pending connection then the socket's file descriptor is available for read
-			C.threadWaitRead fd >>
-			N.accept s >>=
-			\(csock, caddr) -> (
-				-- TODO: log caddr
-				C.forkFinally $ (clientThread csock)
-						(\_ -> myThreadId >>=
-						\mtid -> throwTo mainThreadId (ClientFinished mtid)
+		C.myThreadId >>=
+		\mainThreadId -> (
+			E.catches (
+				-- if there's pending connection then the socket's file descriptor is available for read
+				C.threadWaitRead fd >>
+				N.accept s >>=
+				\(csock, caddr) -> (
+					-- TODO: log caddr
+					{-
+					C.forkFinally $ (clientThread csock)
+							(\_ -> myThreadId >>=
+							\mtid -> throwTo mainThreadId (ClientFinished mtid)
+					) >>=
+					-}
+					C.forkFinally (clientThread csock) (threadFinish mainThreadId) >>=
+					\tid -> (
+					return $ H.insert tid pending
+					)
 				) >>=
-				\tid -> (
-				return $ H.insert tid pending
+				-- point free for \set -> servloop s fd set
+				servloop s fd maxconns (conns - 1)
+				) [
+				E.Handler (\ShutdownSignal -> (
+						gracefulExit pending >>
+						wrapUp s
+						)
+					)
+				, E.Handler (
+					\(ClientFinishedSignal tid) -> (
+						servloop s fd maxconns (
+							-- avoid overflow
+							if conns < maxconns then
+								conns + 1
+							else maxconns
+							) (H.delete tid pending)
+						)
 				)
-			) >>=
-			-- point free for \set -> servloop s fd set
-			servloop s fd maxconns (conns - 1)
+				]
 			)
 	)
 
 -- | Traverses 'H.HashSet' of open connections and instructs them to finish
 gracefulExit :: H.HashSet C.ThreadId -> IO ()
 gracefulExit pending = (
-	if null pending then
+	if H.null pending then
 		-- nothing to do exit immediately
 		return () :: IO ()
 	else
@@ -120,13 +126,13 @@ gracefulExit pending = (
 		in
 		-- ignore return value (which is not important) for a nice function signature
 		-- (\_ -> ()) $ foldr1 (\tid _ -> sendTermSignal tid) conns
-		foldM (\_ tid -> sendTermSignal tid) conns
+		M.foldM (\_ tid -> sendTermSignal tid) () pending
 	)
 
 -- | close the master 'Socket'
 wrapUp :: N.Socket -> IO ()
 wrapUp s = (
-	shutdown s ShutdownBoth >>
-	close s
+	N.shutdown s N.ShutdownBoth >>
+	N.close s
 	)
 
