@@ -43,6 +43,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     - -threaded
+    - -static
     dependencies:
     - nntp
 
