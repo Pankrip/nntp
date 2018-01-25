@@ -31,6 +31,12 @@ dependencies:
 - hspec
 - hspec-discover
 - hspec-core
+- regex-posix
+- split
+- quickcheck-instances
+- text
+- dates
+- aeson
 
 library:
   source-dirs: src

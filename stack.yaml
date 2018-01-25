@@ -51,6 +51,12 @@ extra-deps:
  - hspec-2.4.7
  - hspec-discover-2.4.7
  - hspec-core-2.4.7
+ - regex-posix-0.95.2
+ - split-0.2.3.2
+ - quickcheck-instances-0.3.16.1
+ - text-1.2.3.0
+ - dates-0.2.2.1
+ - aeson-1.2.3.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
