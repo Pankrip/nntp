@@ -19,13 +19,17 @@ module Group (
     checkIfArtInGrp,     -- : Article -> Group -> Bool
     getNumericsForGrp,   -- : Group -> (Int, Int, Int)
     checkIfValidNumeric, -- : Group -> Int -> Bool
-    getArtNumID          -- : Group -> Index -> Maybe Article
+    getArtNumID,         -- : Group -> Index -> Maybe Article
+    getNumericID,        -- : Article -> Group -> Maybe Int
+    getNextArt,          -- : Group -> Article -> Maybe Article
+    getPrevArt           -- : Group -> Article -> Maybe Article
 
 ) where
 
 import Data.Dates
 import Article
 import Data.Aeson
+import qualified Data.List as L
 
 -- | ADT constructor takes a DateTime representing the date and time of the creation
 -- of the group as well as the list of articles associated with the group and the name
@@ -132,6 +136,45 @@ getArtNumID grp numID =
         then Just $ (articles grp) !! numID
     else
         Nothing
+
+-- | Given an article and a group get the numeric id of an article in the group
+getNumericID :: Article
+             -> Group
+             -> Maybe Int      -- ^ Just the found numeric ID or nothing if no such article has been found in this group
+getNumericID art grp = 
+    go art grp 0
+        where go :: Article -> Group -> Int -> Maybe Int
+              go article group acc = 
+                case article == ((articles group) !! acc) of
+                    True -> Just acc
+                    _    -> if acc == length (articles group)
+                                then Nothing
+                            else
+                                go article group $ acc + 1
+
+-- | Given a group and an article get the next article in the group
+getNextArt :: Group             
+           -> Article
+           -> Maybe Article     -- ^ Just the next article or nothing if there's no next article in the group
+getNextArt grp art = 
+    getNumericID art grp >>=
+    \found -> (if checkIfValidNumeric grp $ found + 1
+                then Just found
+              else 
+                Nothing) >>=
+              \next -> return $ (articles grp) !! next
+
+-- | Given a group and an article get the previous article in the group
+getPrevArt :: Group             
+           -> Article
+           -> Maybe Article     -- ^ Just the previous article or nothing if there's no previous article in the group
+getPrevArt grp art = 
+    getNumericID art grp >>=
+    \found -> (if checkIfValidNumeric grp $ found - 1
+                then Just found
+              else 
+                Nothing) >>=
+              \prev -> return $ (articles grp) !! prev
 
 -- -----------------------------------------------------------------------------
 -- Helper functions
