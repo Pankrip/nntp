@@ -22,11 +22,9 @@ import Responses
 
 -- | Common type for every command
 -- | standard command signature
-type Command = (
-		CD.ClientDescriptor	-- ^ current state of the client
-	     -> [S.ByteString]     	-- ^ tokenised list of arguments passed by the client with the command
-	     -> IO CD.ClientDescriptor	-- ^ new state of the client
-	     )
+type Command =  CD.ClientDescriptor     -- ^ current state of the client
+             -> [S.ByteString]          -- ^ tokenised list of arguments passed by the client with the command
+             -> IO CD.ClientDescriptor  -- ^ new state of the client
 
 -- | 'H.HashMap' with all available commands
 commandListing :: H.HashMap S.ByteString Command
@@ -55,6 +53,7 @@ commandListing = (
 -- | Selects and executes command via its name
 execCommand :: S.ByteString -> Command
 execCommand cmd cd args = (
+	-- TODO: set lastCmd && check authinfo here
 	(H.lookupDefault (commandNotFound) cmd commandListing) cd args
 	)
 
@@ -184,7 +183,7 @@ listHelper cd (ST.Storage{ST.groups = []}) =
     N.sendAll (CD.socket cd) (C.pack ".\r\n") >> 
     return (cd { CD.lastCmd = Just ("LIST" :: L.ByteString)})
 listHelper cd (ST.Storage{ST.groups = (g:gs)}) = 
-    N.sendAll (CD.socket cd) (C.pack ((G.name g) ++ " " ++ (show (fst3 fg)) ++ " " ++ (show (snd3 fg)) ++ "n" ++ "\r\n")) >>
+    N.sendAll (CD.socket cd) (C.pack ((G.name g) ++ " " ++ (show (fst3 fg)) ++ " " ++ (show (snd3 fg)) ++ " n" ++ "\r\n")) >>
     listHelper cd (ST.Storage{ST.groups = gs})
         where fg = G.getNumericsForGrp g
 

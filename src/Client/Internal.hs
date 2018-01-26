@@ -18,6 +18,7 @@ import qualified Data.Char as C
 import qualified Network.Socket as N
 import qualified "unix-bytestring" System.Posix.IO.ByteString as I
 import qualified System.Posix.Types as T
+import Debug.Trace
 -- import qualified Foreign.C.Types as Ct
 -- import qualified Data.Word as W
 import qualified Commands as CMD
@@ -32,7 +33,7 @@ dispatchCommand buf cd = (
 	-- undefined
 	-- I.fdWrite (T.Fd $ N.fdSocket $ socket cd) ("goodbye!\r\n" :: S.ByteString) >>
 	let
-	(cmd : args) = (tokenise ("\r\n" :: S.ByteString) (L.toStrict buf))
+	(cmd : args) = (tokenise (" " :: S.ByteString) (L.toStrict buf))
 	in
 	CMD.execCommand (S.map toUpper cmd) cd args
 	)
