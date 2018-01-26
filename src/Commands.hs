@@ -3,6 +3,10 @@
 module Commands
     ( article
     , group
+    , body
+    , headC
+    , stat
+    , list
 	) where
 
 import qualified Client.Descriptor as CD
@@ -76,7 +80,25 @@ article cd args =
                                             S.getStorageLocation >>= \x -> A.getContent foundArticle x >>= \y -> N.sendAll (CD.socket cd) y >>
                                             return (cd { CD.lastCmd = Just ("ARTICLE" :: L.ByteString), CD.article = Just foundArticle})
 
--- the BODY as well as HEAD and STAT functions will be almost identical, so we shall we leave it for now
+-- the BODY as well as HEAD and STAT functions will be almost identical, so we shall we leave them for now
+
+-- | Execute the BODY command
+body :: CD.ClientDescriptor      -- ^ current state of the client
+     -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
+     -> IO CD.ClientDescriptor   -- ^ new state of the client
+body cd args = undefined
+
+-- | Execute the HEAD command
+headC :: CD.ClientDescriptor      -- ^ current state of the client
+      -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
+      -> IO CD.ClientDescriptor   -- ^ new state of the client
+headC cd args = undefined
+
+-- | Execute the STAT command
+stat :: CD.ClientDescriptor      -- ^ current state of the client
+     -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
+     -> IO CD.ClientDescriptor   -- ^ new state of the client
+stat cd args = undefined
 
 -- | Execute the GROUP command
 group :: CD.ClientDescriptor      -- ^ current state of the client
@@ -106,6 +128,25 @@ group cd args =
                                 return (cd { CD.lastCmd = Just ("GROUP" :: L.ByteString), CD.group = Just foundGroup, CD.article = Just ((G.articles foundGroup) !! 0)})
                                     where fg = G.getNumericsForGrp foundGroup
 
+-- | Execute the LIST command (needs to be looked into because of no current support for prohibition of posting)
+list  :: CD.ClientDescriptor      -- ^ current state of the client
+      -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
+      -> IO CD.ClientDescriptor   -- ^ new state of the client
+list cd args =
+    S.getStorage >>= \s -> N.sendAll (CD.socket cd) listResponse >>
+    listHelper cd s
+
+-- Helper function for the list command
+listHelper :: CD.ClientDescriptor
+           -> ST.Storage
+           -> IO CD.ClientDescriptor
+listHelper cd (ST.Storage{ST.groups = []}) = 
+    N.sendAll (CD.socket cd) (C.pack ".\r\n") >> 
+    return (cd { CD.lastCmd = Just ("LIST" :: L.ByteString)})
+listHelper cd (ST.Storage{ST.groups = (g:gs)}) = 
+    N.sendAll (CD.socket cd) (C.pack ((G.name g) ++ " " ++ (show (fst3 fg)) ++ " " ++ (show (snd3 fg)) ++ "n" ++ "\r\n")) >>
+    listHelper cd (ST.Storage{ST.groups = gs})
+        where fg = G.getNumericsForGrp g
 
 -- -----------------------------------------------------------------------------
 -- Standard server responses with according response codes
@@ -139,6 +180,9 @@ groupNotFoundErrResponse = C.pack "411 no such news group\r\n"
 
 groupSelectedResponse :: Int -> Int -> Int -> String -> S.ByteString
 groupSelectedResponse n f l s = C.pack $ "211 " ++ (show n) ++ " " ++ (show f) ++ " " ++ (show l) ++ " " ++ s ++  "group selected\r\n"
+
+listResponse :: S.ByteString
+listResponse = C.pack $ "215 list of newsgroups follows\r\n"
 
 -- -----------------------------------------------------------------------------
 -- Helper functions
