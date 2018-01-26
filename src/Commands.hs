@@ -4,11 +4,13 @@ module Commands
     ( article
     , group
     , body
-    , headC
+    , head
     , stat
     , list
 	) where
 
+import Prelude hiding (head)
+import qualified Prelude as P (head)
 import qualified Client.Descriptor as CD
 import qualified Network.Socket.ByteString as N
 import qualified Data.ByteString.Lazy as L
@@ -47,9 +49,9 @@ article cd args =
                     return (cd { CD.lastCmd = Just ("ARTICLE" :: L.ByteString)})
         False ->
             let 
-                art = C.unpack $ head args
+                art = C.unpack $ P.head args
             in
-                if head art == '<' && last art == '>' then
+                if P.head art == '<' && last art == '>' then
                     let 
                         trimmed = (tail . init) art
                     in
@@ -90,10 +92,10 @@ body :: CD.ClientDescriptor      -- ^ current state of the client
 body cd args = undefined
 
 -- | Execute the HEAD command
-headC :: CD.ClientDescriptor      -- ^ current state of the client
+head :: CD.ClientDescriptor      -- ^ current state of the client
       -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
       -> IO CD.ClientDescriptor   -- ^ new state of the client
-headC cd args = undefined
+head cd args = undefined
 
 -- | Execute the STAT command
 stat :: CD.ClientDescriptor      -- ^ current state of the client
@@ -112,7 +114,7 @@ group cd args =
             return (cd { CD.lastCmd = Just ("GROUP" :: L.ByteString)})
         False ->
             let 
-                grp = (strToUpper . C.unpack) $ head args
+                grp = (strToUpper . C.unpack) $ P.head args
             in
                 S.getStorage >>= \s -> case ST.getGroup s grp of
                     Nothing ->
