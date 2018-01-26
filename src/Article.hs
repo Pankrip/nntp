@@ -15,7 +15,7 @@ module Article (
 
     -- * Working with Articles
     Article(..),
-    getContent,          -- : Article -> IO S.ByteString
+    getContent,          -- : Article -> B.ByteString -> IO S.ByteString
     saveContentP,        -- : S.ByteString -> String -> IO ()
     saveContentI,        -- : S.ByteString -> IO ()
     -- * Working with ByteStrings
@@ -37,6 +37,7 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString as S
 import Text.Regex.Posix
 import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString.Lazy.Char8 as CL
 import Data.List.Split (splitOn)
 import Data.Char (toUpper)
 import qualified Data.Text as T
@@ -64,9 +65,10 @@ data Article = Article
 
 -- | Fetch the contents of an article from the database in the form of a ByteString
 getContent :: Article               -- ^ the article in question
+           -> B.ByteString          -- ^ storage location
            -> IO S.ByteString       -- ^ just the contents of the article or nothing in case of failure
-getContent (Article identifier) = do
-    inHdlr <- openFile identifier ReadMode
+getContent (Article identifier) location = do
+    inHdlr <- openFile ((CL.unpack location) ++ "/" ++ identifier) ReadMode
     inpStr <- S.hGetContents inHdlr
     return inpStr
 
