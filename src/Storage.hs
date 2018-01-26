@@ -22,6 +22,8 @@ module Storage (
     getGroup,           -- : Storage -> String -> Maybe Group
     getGrpsOfArt,       -- : Storage -> Article -> [Group]
     fetchArtNumID,      -- : Storage -> String -> Int -> Maybe Article
+    isArtInStorage,     -- : Storage -> Article -> Bool
+    findArticleByMsgID, -- : Storage -> String -> Maybe Article
     -- * Serialization of the Storage
     restoreStorage,     -- : String -> Maybe Storage
     syncStorage         -- : Storage -> String -> IO ()
@@ -104,6 +106,27 @@ fetchArtNumID stg nameOfGrp index =
     getGroup stg nameOfGrp >>=
     \g -> getArtNumID g index
 
+-- | Checks whether a given article is in the storage
+isArtInStorage :: Storage
+               -> Article
+               -> Bool
+isArtInStorage (Storage []) art = False
+isArtInStorage (Storage (g:gs)) art =
+    if any ( == art) (articles g) then
+        True
+    else
+        isArtInStorage (Storage gs) art
+
+-- | Find an article in the storage which has a given Message-ID
+findArticleByMsgID :: Storage
+                   -> String
+                   -> Maybe Article
+findArticleByMsgID (Storage []) msg = Nothing
+findArticleByMsgID (Storage (g:gs)) msgid =
+    case L.find (\a -> identifier a == msgid) (articles g) of
+        Nothing -> findArticleByMsgID (Storage gs) msgid
+        Just foundArticle -> Just foundArticle
+
 -- -----------------------------------------------------------------------------
 -- Restoring and syncing the interal Storage with an external one
 
@@ -111,7 +134,7 @@ fetchArtNumID stg nameOfGrp index =
 restoreStorage :: String              -- ^ path to the location of the fs database
                -> IO (Maybe Storage)  -- ^ restored storage
 restoreStorage path = 
-    B.readFile (path ++ "STORAGE.json" ) >>=
+    B.readFile (path ++ "/STORAGE.json" ) >>=
     \inpJson -> return $ decode inpJson
 
 -- | Syncs the local database storage with the current state of the server,
@@ -120,4 +143,4 @@ syncStorage :: Storage     -- ^ the current state of the storage
             -> String      -- ^ path for the fs database location
             -> IO ()
 syncStorage storage path =
-    B.writeFile (path ++ "STORAGE.json") $ encode storage
+    B.writeFile (path ++ "/STORAGE.json") $ encode storage
