@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Responses
     ( articleRetrievedResponse
     , articleRetrievedResponse
@@ -10,10 +12,12 @@ module Responses
     , groupNotFoundErrResponse
     , groupSelectedResponse
     , listResponse
+    , quitResponse
     , nextArticleResponse
     , noNewsGroupSelectedResponse
     , noArtSelectedResponse
     , noNextResponse
+    , commandNotRecognizedResponse
 	) where
 
 import qualified Data.ByteString as S
@@ -55,6 +59,9 @@ groupSelectedResponse n f l s = C.pack $ "211 " ++ (show n) ++ " " ++ (show f) +
 listResponse :: S.ByteString
 listResponse = C.pack $ "215 list of newsgroups follows\r\n"
 
+quitResponse :: S.ByteString
+quitResponse = ("205 closing connection - goodbye!\r\n" :: S.ByteString)
+
 nextArticleResponse :: String -> String -> S.ByteString
 nextArticleResponse n a = C.pack $ n ++ " " ++ a ++ " article retrieved - request text separately\r\n"
 
@@ -66,3 +73,7 @@ noArtSelectedResponse = C.pack "420 no current article has been selected\r\n"
 
 noNextResponse :: S.ByteString
 noNextResponse = C.pack "421 no next article in this group\r\n"
+
+commandNotRecognizedResponse :: S.ByteString
+commandNotRecognizedResponse = ("500 command not recognized\r\n" :: S.ByteString)
+

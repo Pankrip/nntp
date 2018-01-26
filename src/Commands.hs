@@ -1,21 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Commands
-    ( article
-    , group
-    , body
-    , head
-    , stat
-    , list
-	) where
+    ( execCommand
+    ) where
 
-import Prelude hiding (head)
-import qualified Prelude as P (head)
+import Prelude hiding (head, last)
+import qualified Prelude as P (head, last)
 import qualified Client.Descriptor as CD
 import qualified Network.Socket.ByteString as N
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString as S
 import qualified Data.ByteString.Char8 as C
+import qualified Data.HashMap.Strict as H
 import qualified State as S
 import qualified Group as G
 import qualified Article as A
@@ -24,13 +20,64 @@ import qualified Text.Read as R
 import Data.Char (toUpper)
 import Responses
 
+-- | Common type for every command
+-- | standard command signature
+type Command = (
+		CD.ClientDescriptor	-- ^ current state of the client
+	     -> [S.ByteString]     	-- ^ tokenised list of arguments passed by the client with the command
+	     -> IO CD.ClientDescriptor	-- ^ new state of the client
+	     )
+
+-- | 'H.HashMap' with all available commands
+commandListing :: H.HashMap S.ByteString Command
+commandListing = (
+	H.fromList [
+	  ( ( "ARTICLE"   :: S.ByteString),  article   )
+	, ( ( "BODY"      :: S.ByteString),  body      )
+	, ( ( "GROUP"     :: S.ByteString),  group     )
+	, ( ( "HEAD"      :: S.ByteString),  head      )
+	, ( ( "HELP"      :: S.ByteString),  help      )
+	, ( ( "IHAVE"     :: S.ByteString),  ihave     )
+	, ( ( "LAST"      :: S.ByteString),  last      )
+	, ( ( "LIST"      :: S.ByteString),  list      )
+	, ( ( "NEWGROUPS" :: S.ByteString),  newgroups )
+	, ( ( "NEWNEWS"   :: S.ByteString),  newnews   )
+	, ( ( "NEXT"      :: S.ByteString),  next      )
+	, ( ( "POST"      :: S.ByteString),  post      )
+	, ( ( "SLAVE"     :: S.ByteString),  slave     )
+	, ( ( "STAT"      :: S.ByteString),  stat      )
+	, ( ( "QUIT"      :: S.ByteString),  quit      )
+	]
+	)
+
+-- -----------------
+-- Command selector
+-- | Selects and executes command via its name
+execCommand :: S.ByteString -> Command
+execCommand cmd cd args = (
+	(H.lookupDefault (commandNotFound) cmd commandListing) cd args
+	)
+
+-- |
+-- commandNotFound :: CD.ClientDescriptor -> S.ByteString -> IO CD.ClientDescriptor
+commandNotFound :: Command
+commandNotFound cd s = (
+	N.sendAll (CD.socket cd) commandSyntaxErrorResponse >>
+	return cd
+	)
+
+-- |
+commandNotSupported :: Command
+commandNotSupported cd s = (
+	N.sendAll (CD.socket cd) commandNotRecognizedResponse >>
+	return cd
+	)
+
 -- -----------------------------------------------------------------------------
 -- Functions responsible for exectuing particular commands
 
 -- | Execute the ARTICLE command
-article :: CD.ClientDescriptor      -- ^ current state of the client
-        -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
-        -> IO CD.ClientDescriptor   -- ^ new state of the client
+article :: Command
 article cd args = 
     case null args of
         True -> 
@@ -51,7 +98,7 @@ article cd args =
             let 
                 art = C.unpack $ P.head args
             in
-                if P.head art == '<' && last art == '>' then
+                if P.head art == '<' && P.last art == '>' then
                     let 
                         trimmed = (tail . init) art
                     in
@@ -86,27 +133,19 @@ article cd args =
 -- the BODY as well as HEAD and STAT functions will be almost identical, so we shall we leave them for now
 
 -- | Execute the BODY command
-body :: CD.ClientDescriptor      -- ^ current state of the client
-     -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
-     -> IO CD.ClientDescriptor   -- ^ new state of the client
-body cd args = undefined
+body :: Command
+body cd args = commandNotSupported cd args
 
 -- | Execute the HEAD command
-head :: CD.ClientDescriptor      -- ^ current state of the client
-      -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
-      -> IO CD.ClientDescriptor   -- ^ new state of the client
-head cd args = undefined
+head :: Command
+head cd args = commandNotSupported cd args
 
 -- | Execute the STAT command
-stat :: CD.ClientDescriptor      -- ^ current state of the client
-     -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
-     -> IO CD.ClientDescriptor   -- ^ new state of the client
-stat cd args = undefined
+stat :: Command
+stat cd args = commandNotSupported cd args
 
 -- | Execute the GROUP command
-group :: CD.ClientDescriptor      -- ^ current state of the client
-      -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
-      -> IO CD.ClientDescriptor   -- ^ new state of the client
+group :: Command
 group cd args =
     case null args of
         True ->
@@ -132,9 +171,7 @@ group cd args =
                                     where fg = G.getNumericsForGrp foundGroup
 
 -- | Execute the LIST command (needs to be looked into because of no current support for prohibition of posting)
-list  :: CD.ClientDescriptor      -- ^ current state of the client
-      -> [S.ByteString]           -- ^ tokenised list of arguments passed by the client with the command
-      -> IO CD.ClientDescriptor   -- ^ new state of the client
+list :: Command
 list cd args =
     S.getStorage >>= \s -> N.sendAll (CD.socket cd) listResponse >>
     listHelper cd s
@@ -150,6 +187,36 @@ listHelper cd (ST.Storage{ST.groups = (g:gs)}) =
     N.sendAll (CD.socket cd) (C.pack ((G.name g) ++ " " ++ (show (fst3 fg)) ++ " " ++ (show (snd3 fg)) ++ "n" ++ "\r\n")) >>
     listHelper cd (ST.Storage{ST.groups = gs})
         where fg = G.getNumericsForGrp g
+
+help :: Command
+help = commandNotSupported
+
+ihave :: Command
+ihave = commandNotSupported
+
+last :: Command
+last = commandNotSupported
+
+newgroups :: Command
+newgroups = commandNotSupported
+
+newnews :: Command
+newnews = commandNotSupported
+
+next :: Command
+next = commandNotSupported
+
+post :: Command
+post = commandNotSupported
+
+quit :: Command
+quit cd _ = (
+	N.sendAll (CD.socket cd) quitResponse >>
+	return (cd { CD.state = CD.QuitMode })
+	)
+
+slave :: Command
+slave = commandNotSupported
 
 -- -----------------------------------------------------------------------------
 -- Helper functions

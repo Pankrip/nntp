@@ -32,12 +32,9 @@ dispatchCommand buf cd = (
 	-- undefined
 	-- I.fdWrite (T.Fd $ N.fdSocket $ socket cd) ("goodbye!\r\n" :: S.ByteString) >>
 	let
-	args = (tokenise ("\r\n" :: S.ByteString) (L.toStrict buf))
+	(cmd : args) = (tokenise ("\r\n" :: S.ByteString) (L.toStrict buf))
 	in
-	if (S.map (toUpper) (head args)) == ("ARTICLE" :: S.ByteString) then
-		CMD.article cd (tail args)
-	else
-		return cd { state = QuitMode }
+	CMD.execCommand (S.map toUpper cmd) cd args
 	)
 
 tokenise :: S.ByteString -> S.ByteString -> [S.ByteString]
@@ -53,3 +50,5 @@ toUpper c = (
 	((toEnum :: Int -> W.Word8) . fromEnum) $
 	(C.toUpper . ((toEnum :: Int -> Char) . fromEnum)) c
 	)
+
+
