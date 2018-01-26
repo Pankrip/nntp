@@ -29,6 +29,8 @@ module Article (
     requiredForIHAVE,    -- : [String]
     getMessageID,        -- : Maybe String
     getFieldTuple,       -- : S.ByteString -> String -> (S.ByteString, S.ByteString)
+    getHeaderStrUnsafe,  -- : S.ByteString -> S.ByteString
+    getBodyStrUnsafe,    -- : S.ByteString -> S.ByteString
     getNewsgroups        -- : S.ByteString -> Maybe [String]
 
 ) where
@@ -109,10 +111,15 @@ getHeaderStr :: S.ByteString        -- ^ the article in the from of a ByteString
              -> Maybe S.ByteString  -- ^ just the retrieved header in the form of a ByteString or nothing in case of failure
 getHeaderStr msg =
     let 
-        head = fst3 (msg =~ "\n\n" :: (S.ByteString, S.ByteString, S.ByteString))
+        head = getHeaderStrUnsafe msg
     in 
         if head == msg then Nothing
         else Just head
+
+-- | Same as getHeaderStr but does not check if the element is present
+getHeaderStrUnsafe :: S.ByteString
+                   -> S.ByteString
+getHeaderStrUnsafe msg = fst3 (msg =~ "\n\n" :: (S.ByteString, S.ByteString, S.ByteString))
 
 -- | Retrieve the header as ByteString from an article in the form of a ByteString,
 -- may fail if the format of the article is not coforming to the standard
@@ -120,10 +127,15 @@ getBodyStr :: S.ByteString          -- ^ the article in the form of a ByteString
            -> Maybe S.ByteString    -- ^ just the retrieved header in the form of a ByteString or nothing in case of failure
 getBodyStr msg =
     let
-        body = thr3 (msg =~ "\n\n" :: (S.ByteString, S.ByteString, S.ByteString))
+        body = getBodyStrUnsafe msg
     in
         if body == (C.pack "") then Nothing
         else Just body
+
+-- | Same as getBodyStr but does not check if the element is present
+getBodyStrUnsafe :: S.ByteString
+                 -> S.ByteString
+getBodyStrUnsafe msg = thr3 (msg =~ "\n\n" :: (S.ByteString, S.ByteString, S.ByteString))
 
 -- TODO
 unfoldHeader :: String -> String

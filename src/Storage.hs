@@ -38,6 +38,7 @@ import Article
 import qualified Data.List as L
 import Data.Tuple
 import Data.Aeson
+import Data.Char (toUpper)
 
 data Storage = Storage 
                {
@@ -88,7 +89,7 @@ getGroup :: Storage         -- ^ current state of the storage
          -> String          -- ^ name of the sought group
          -> Maybe Group     -- ^ found group
 getGroup (Storage {groups = grps}) nameOfGrp =
-    L.find (\g -> name g == nameOfGrp) grps
+    L.find (\g -> (strToUpper (name g)) == (strToUpper nameOfGrp)) grps
 
 -- | Get a list of all groups to which a particular article belongs
 getGrpsOfArt :: Storage     -- ^ current state of the storage
@@ -144,3 +145,9 @@ syncStorage :: Storage     -- ^ the current state of the storage
             -> IO ()
 syncStorage storage path =
     B.writeFile (path ++ "/STORAGE.json") $ encode storage
+
+-- -----------------------------------------------------------------------------
+-- Helper fucntions (not exported by the module so not visile in the documentation either)
+
+strToUpper :: [Char] -> [Char]
+strToUpper str = map toUpper str
