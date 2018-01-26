@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import qualified Data.ByteString.Lazy as L
@@ -9,6 +11,7 @@ import Init
 import Options
 import Signals
 import MasterSocket
+import State
 
 main :: IO ()
 {-
@@ -36,6 +39,7 @@ main = (
 
 -- proof of concept testing
 main = (
+	putStorageLocation ("./groups" :: L.ByteString) >>
 	E.getArgs >>=
 	return . getConfig >>=
 	proceedOrFail
@@ -50,7 +54,7 @@ proceedOrFail (Right conf) = (
 			initMasterSocket (L.toStrict <$> (host conf)) (L.toStrict p) >>=
 			\sock -> (
 				C.myThreadId >>= installExitHandlers >>
-				acceptLoop sock 5
+				acceptLoop sock 10
 				)
 			)
 	)

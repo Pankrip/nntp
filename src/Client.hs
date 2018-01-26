@@ -1,5 +1,6 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Client
 	( OperationMode (..)
@@ -12,11 +13,15 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString as S
 import qualified Control.Concurrent as C
 import qualified Control.Exception as E
-import qualified Network.Socket as N
+import qualified Network.Socket as N hiding (sendAll, send)
+import qualified Network.Socket.ByteString as N
 import qualified "unix-bytestring" System.Posix.IO.ByteString as I
 import qualified System.Posix.Types as T
 import qualified Foreign.C.Types as Ct
 import qualified Data.Word as W
+import Debug.Trace
+import System.IO.Unsafe as EV
+import qualified State as ST
 --
 -- import Signals (TerminateClientSignal)
 -- can't import instances with named import
@@ -39,7 +44,7 @@ clientThread cs = (
 	let
 	sockfd = N.fdSocket cs
 	in
-	E.handle (\Sig.TerminateClientSignal -> gracefulExit cs)
+	E.handle (\Sig.TerminateClientSignal -> (gracefulExit cs))
 		 -- (repl (T.Fd sockfd) (L.empty :: L.ByteString) maxQUERY CommandMode)
 		 (repl CommandMode L.empty (newClientDescriptor cs))
 	)
@@ -59,7 +64,24 @@ threadFinish tid _ = (
 -- | Sends a 400 Service Discountiued message to client and closes the connection
 gracefulExit :: N.Socket
 	     -> IO ()
-gracefulExit cs = undefined
+gracefulExit cs = (
+	(N.getSocketName cs >>=
+	\(N.SockAddrInet p _) -> (return $ show p) >>=
+	\p -> traceIO $ "quitting from client: " ++ p ++ "\n"
+	) >>
+	{-
+	(traceIO $ "quitting from client: "
+		++ (unsafePerformIO (N.getSocketName cs >>= \(N.SockAddrInet p _) -> return $ show p)) )
+	>>
+	-}
+	-- TODO: de-hardcode this
+	-- force execution on evaluation of the return value,
+	-- and require return value to be strictly evaluated
+	-- EV.unsafeInterleaveIO (N.sendAll cs ("400 Service Discontinued\r\n" :: S.ByteString))
+	(N.sendAll cs ("400 Service Discontinued\r\n" :: S.ByteString))
+	-- >>= (\(!v) -> ST.semaphore >>= (\sem -> SM.signalQSemN sem (-1)))
+	)
+
 
 {-
 -- | helper function to return size with 'T.ByteCount' type

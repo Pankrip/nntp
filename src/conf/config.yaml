@@ -3,6 +3,7 @@ server:
  host: 127.0.0.1
  port: 9111
  max-connections: 20
+ directory: ./groups
  logs:
   access: ./access.log
   error: ./error.log

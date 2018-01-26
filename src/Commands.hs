@@ -1,15 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Commands
-	( 
+	( article
 	) where
 
-import Client.Descriptor
-import Netowork.Socket.ByteString
+import qualified Client.Descriptor as CD
+import Network.Socket.ByteString
+import qualified Data.ByteString as S
 
-article :: ClientDescriptor
-        -> [ByteString]
-        -> IO ClientDescriptor
-article cd args = sendAll $ socket cd $ ("xD" :: ByteString) >>
+article :: CD.ClientDescriptor
+        -> [S.ByteString]
+        -> IO CD.ClientDescriptor
+article cd args = sendAll (CD.socket cd) ("192 <article>\r\n" :: S.ByteString) >>
         return cd
 

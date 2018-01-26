@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module MasterSocket
 	( initMasterSocket
 	, acceptLoop
@@ -13,6 +15,10 @@ import qualified Control.Concurrent as C
 import qualified Control.Exception as E
 import qualified Control.Monad as M
 import System.Posix.Types (Fd (..))
+import Debug.Trace
+import qualified System.IO.Unsafe as EV
+import qualified State as ST
+import qualified Control.Concurrent.QSemN as SM
 --
 import Signals (ShutdownSignal (..), sendTermSignal, ClientFinishedSignal (..))
 import Client (clientThread, threadFinish)
@@ -88,14 +94,18 @@ servloop s fd maxconns conns pending = (
 					) >>=
 					-}
 					C.forkFinally (clientThread csock) (threadFinish mainThreadId) >>=
+
 					\tid -> (
-					return $ H.insert tid pending
+						 (traceIO "registering new client\n")
+						 -- >> (ST.semaphore >>= \sem -> SM.signalQSemN sem 1)
+						 >>= \c -> return $ H.insert tid pending
 					)
 				) >>=
 				-- point free for \set -> servloop s fd set
 				servloop s fd maxconns (conns - 1)
 				) [
 				E.Handler (\ShutdownSignal -> (
+						traceIO "recieved exit signal\n" >>
 						gracefulExit pending >>
 						wrapUp s
 						)
@@ -108,6 +118,7 @@ servloop s fd maxconns conns pending = (
 								conns + 1
 							else maxconns
 							) (H.delete tid pending)
+							-- >> ST.semaphore >>= \sem -> SM.signalQSemN sem (-1)
 						)
 				)
 				]
@@ -115,10 +126,12 @@ servloop s fd maxconns conns pending = (
 	)
 
 -- | Traverses 'H.HashSet' of open connections and instructs them to finish
+{-# NOINLINE gracefulExit #-}
 gracefulExit :: H.HashSet C.ThreadId -> IO ()
 gracefulExit pending = (
 	if H.null pending then
 		-- nothing to do exit immediately
+		traceIO "empty pending connections set\n" >>
 		return () :: IO ()
 	else
 		let
@@ -126,7 +139,9 @@ gracefulExit pending = (
 		in
 		-- ignore return value (which is not important) for a nice function signature
 		-- (\_ -> ()) $ foldr1 (\tid _ -> sendTermSignal tid) conns
-		M.foldM (\_ tid -> sendTermSignal tid) () pending
+		(traceIO $ "there are " ++ (show $ length conns) ++ " waiting to be closed\n") >>
+		M.foldM (\_ tid -> sendTermSignal tid >>= \(!v) -> return ()) () conns
+		-- >> ST.semaphore >>= \sem -> SM.waitQSemN sem 0
 	)
 
 -- | close the master 'Socket'
