@@ -23,9 +23,9 @@ każdej funkcji napisano zaledwie jeden test, co w przypadku pozytywnego
 przejścia całego test-suit'u raczej nie pozwoli na posiadanie stuprocentowej 
 pewności o poprawnej implementacji. Testy również nie zostały w żaden 
 sposób opisane przy pomocy komentarzy, co może w przyszłości spowodować, 
-że nowe osobe,  którym przekazano by pieczę nad projektem, mogłby by mieć 
+że nowe osoby,  którym przekazano by pieczę nad projektem, mogłby by mieć 
 nieco pod górkę. Nic nie możemy powiedzieć natomiast na temat testów z 
-wykorzystanie pakietu `QuickCheck`, z uwagi, że w całym projekcie znajduje 
+wykorzystaniem pakietu `QuickCheck`, z uwagi, że w całym projekcie znajduje 
 się zaledwie jeden test, który w dodatku dotyczy funkcji pochodzącej z 
 podstawowego pakietu. 
 
@@ -36,7 +36,7 @@ wcięciami i ogólnie dość schludnym formatowaniem. Jednakże użycie
 długiego formatu komentarza dokumentującego funkcję, czyniąc nieraz opis 
 funkcji dłuższym od jej samej (np. 4 linijkowy komentarz do 2-linijkowej 
 funckji) może w opini recenzentów "przytłoczyć" czytelnika kodu, 
-zmniejszając tym jego czytelność, osiągając tym cel przeciwny do 
+zmniejszając jego czytelność, osiągając tym cel przeciwny do 
 zamierzonego. Zadbano o nienadużywanie nawiasów, stosowano je jedynie w 
 miejscach obsolutnie koniecznych, a tam gdzie się dało, stosowano 
 zdecydowanie bardziej czytelne rozwiązanie w postaci operatorów `.` oraz `$`. 
@@ -45,11 +45,11 @@ Warto również zwrócić uwagę, że kod nie jest w żaden sposób
 dla doświadczonego programisty Haskella będzie od razu czytelny i łatwy do 
 zrozumienia. Drobnym minusem jest z kolei dość macosze podejście do obsługi 
 błędów oraz całkowity brak wykorzystania bardziej rozbudowanych konstrukcji 
-językowaych, takich jak funktory i monady.
+językowych, takich jak funktory i monady.
 W opini recenzentów użycie funkcji `try` zamiast `catch`/`handle` w przypadku 
-obsługi błędu, skutkuje niepotrzebnym użyciem typu monadycznego `Either`
+obsługi błędu, skutkuje niepotrzebnym użyciem typu monadycznego `Either`.
 Wracając do dokumentacji funkcji raz jeszcze, poza drobnymi błędami 
-powstałymi przy najprawdopodbnie mechanicznej replikacji komentarzy (np. 
+powstałymi przy najprawdopodbniej mechanicznej replikacji komentarzy (np. 
 `takes one arguments`), to stosowanie komentarza typu `it takes x arugments, of 
 type 'a' nd 'b' and returns a 'c'` jest całkowicie zbędne, mając na uwadzę 
 to że wszelkich informacji zawartych w tej lini dokumentacji można 
@@ -79,7 +79,7 @@ _List comprehension_ w powyższym przykładzie jest całkowicie zbędne
 `countWordOcc (MkDocument path content) word = length [x | x <- words content, 
 x == word]`
 Użycie _list comprehension_ w tym kontekście można zastąpić użyciem 
-funkcji `fitler` wraz z funkcją zdefiniowaną przez twórców w module 
+funkcji `filter` wraz z funkcją zdefiniowaną przez twórców w module 
 `Utils`, lub, używając bardziej funkcyjnego stylu, przy użyciu _fold_
 
 w funkcji `countLettersOcc` stałe znakowe ASCII zostały zakodowane przy 
