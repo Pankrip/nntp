@@ -46,7 +46,7 @@ dla doświadczonego programisty Haskella będzie od razu czytelny i łatwy do
 zrozumienia. Drobnym minusem jest z kolei dość macosze podejście do obsługi 
 błędów oraz całkowity brak wykorzystania bardziej rozbudowanych konstrukcji 
 językowaych, takich jak funktory i monady.
-W opini autorów użycie funkcji `try` zamiast `catch`/`handle` w przypadku 
+W opini recenzentów użycie funkcji `try` zamiast `catch`/`handle` w przypadku 
 obsługi błędu, skutkuje niepotrzebnym użyciem typu monadycznego `Either`
 Wracając do dokumentacji funkcji raz jeszcze, poza drobnymi błędami 
 powstałymi przy najprawdopodbnie mechanicznej replikacji komentarzy (np. 
