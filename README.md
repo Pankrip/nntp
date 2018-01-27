@@ -7,4 +7,4 @@ A Haskell implementation of Usenet news distribution server via Network News Tra
 * [RFC 850](https://tools.ietf.org/html/rfc850)
 
 ### Review of the project of another group:
-[Review.md](Review/Review.nd)
+[Review.md](Review/Review.md)
